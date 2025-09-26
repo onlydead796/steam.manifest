@@ -1,58 +1,61 @@
 const express = require('express');
 const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 const app = express();
 app.use(cors());
 
-// Supabase client
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+// Backblaze B2 S3 Client
+const s3 = new S3Client({
+  endpoint: process.env.B2_ENDPOINT, // Örn: https://s3.us-east-005.backblazeb2.com
+  region: process.env.B2_REGION || 'us-east-005',
+  credentials: {
+    accessKeyId: process.env.B2_KEY_ID,
+    secretAccessKey: process.env.B2_APPLICATION_KEY,
+  },
+});
 
-// Statik dosyaları sun
+const BUCKET = process.env.B2_BUCKET;
+
+// Statik dosyalar (public klasörü)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// GET Signed URL endpoint (frontend ile uyumlu)
+// Signed URL endpoint
 app.get('/get-signed-url/:gameId', async (req, res) => {
   const { gameId } = req.params;
 
   try {
-    const { data, error } = await supabase
-      .storage
-      .from('zip-files')
-      .createSignedUrl(`${gameId}.zip`, 60); // 1 dakika geçerli
+    const command = new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: `${gameId}.zip`,
+    });
 
-    if (error || !data.signedUrl) {
-      return res.json({ signedUrl: null });
-    }
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
 
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.json({ signedUrl: data.signedUrl });
-
+    res.json({ signedUrl });
   } catch (err) {
-    console.error(err);
+    console.error('Signed URL oluşturulurken hata:', err);
     res.status(500).json({ signedUrl: null });
   }
 });
 
-// Proxy ile direkt download endpoint (isteğe bağlı)
+// Download proxy (isteğe bağlı)
 app.get('/download/:gameId', async (req, res) => {
   const { gameId } = req.params;
 
   try {
-    const { data, error } = await supabase
-      .storage
-      .from('zip-files')
-      .createSignedUrl(`${gameId}.zip`, 60);
+    const command = new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: `${gameId}.zip`,
+    });
 
-    if (error || !data.signedUrl) return res.status(404).send('Dosya bulunamadı');
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
 
-    res.redirect(data.signedUrl); // Direkt kullanıcıyı signed URL’e yönlendir
-
+    res.redirect(signedUrl);
   } catch (err) {
-    console.error(err);
+    console.error('Download sırasında hata:', err);
     res.status(500).send('Beklenmedik bir hata oluştu');
   }
 });
@@ -62,5 +65,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Sunucu başlat
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Backend çalışıyor: http://localhost:${port}`));
