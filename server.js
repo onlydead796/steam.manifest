@@ -9,8 +9,8 @@ app.use(cors());
 
 // Backblaze B2 S3 Client
 const s3 = new S3Client({
-  endpoint: process.env.B2_ENDPOINT, // Örn: https://s3.us-east-005.backblazeb2.com
-  region: process.env.B2_REGION || 'us-east-004',
+  endpoint: process.env.B2_ENDPOINT, // Örn: https://s3.us-west-004.backblazeb2.com
+  region: process.env.B2_REGION || 'us-west-004',
   credentials: {
     accessKeyId: process.env.B2_KEY_ID,
     secretAccessKey: process.env.B2_APPLICATION_KEY,
@@ -32,7 +32,8 @@ app.get('/get-signed-url/:gameId', async (req, res) => {
       Key: `${gameId}.zip`,
     });
 
-    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
+    // 900 saniye = 15 dakika geçerli link
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 900 });
 
     res.json({ signedUrl });
   } catch (err) {
@@ -51,7 +52,7 @@ app.get('/download/:gameId', async (req, res) => {
       Key: `${gameId}.zip`,
     });
 
-    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 900 });
 
     res.redirect(signedUrl);
   } catch (err) {
