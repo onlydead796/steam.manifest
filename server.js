@@ -11,6 +11,8 @@ app.use(cors());
 const s3 = new S3Client({
   endpoint: process.env.B2_ENDPOINT, // Örn: https://s3.us-west-004.backblazeb2.com
   region: process.env.B2_REGION || 'us-west-004',
+  forcePathStyle: true,   // Virtual-host yerine path-style kullansın
+  bucketEndpoint: false,  // Bucket'ı domain'e koyma
   credentials: {
     accessKeyId: process.env.B2_KEY_ID,
     secretAccessKey: process.env.B2_APPLICATION_KEY,
@@ -32,8 +34,7 @@ app.get('/get-signed-url/:gameId', async (req, res) => {
       Key: `${gameId}.zip`,
     });
 
-    // 900 saniye = 15 dakika geçerli link
-    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 900 });
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 900 }); // 15 dk geçerli
 
     res.json({ signedUrl });
   } catch (err) {
