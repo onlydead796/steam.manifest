@@ -10,7 +10,7 @@ app.use(cors());
 // Backblaze B2 S3 Client
 const s3 = new S3Client({
   endpoint: process.env.B2_ENDPOINT, // Örn: https://s3.us-east-005.backblazeb2.com
-  region: process.env.B2_REGION || 'us-east-005',
+  region: process.env.B2_REGION || 'us-east-004',
   credentials: {
     accessKeyId: process.env.B2_KEY_ID,
     secretAccessKey: process.env.B2_APPLICATION_KEY,
