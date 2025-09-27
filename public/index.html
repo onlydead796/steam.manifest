@@ -263,24 +263,53 @@
                 }
             }
 
+            // Yazıların üst üste binmesini önlemek için basit bir kuyruk
+            let __typingQueue = Promise.resolve();
+
             function typeTerminalText(text, initialDelay) {
-            const chars = Array.from(text);
-            let i = 0;
-            setTimeout(() => {
-                const interval = setInterval(() => {
-                    if (i < chars.length) {
+              __typingQueue = __typingQueue.then(() => new Promise((resolve) => {
+                const lines = text
+                  .replace(/\r\n/g, "\n")
+                  .split("\n")
+                  .filter(line => line.trim() !== "");
+                let currentLine = 0;
+
+                setTimeout(() => {
+                  function typeLine() {
+                    if (currentLine >= lines.length) {
+                      resolve();
+                      return;
+                    }
+
+                    const chars = Array.from(lines[currentLine]);
+                    let i = 0;
+
+                    const interval = setInterval(() => {
+                      if (i < chars.length) {
                         terminalOutput.textContent += chars[i];
                         terminalOutput.scrollTop = terminalOutput.scrollHeight;
                         i++;
-                    } else {
+                      } else {
                         clearInterval(interval);
-                    }
-                }, 20);
-            }, initialDelay);
-        }
+                        terminalOutput.textContent += "\n"; // sadece satır bitince yeni satır
+                        currentLine++;
+                        typeLine();
+                      }
+                    }, 20);
+                  }
+
+                  typeLine();
+                }, initialDelay);
+              }));
+
+              return __typingQueue;
+            }
+
+              // Global erişim için dışa aktar
+              window.typeTerminalText = typeTerminalText;
             
             function showError(msg) {
-                typeTerminalText(`> HATA: ${msg}\n`, 0);
+                typeTerminalText(`> HATA: ${msg}\n` , 0);
                 resultsSection.classList.remove('hidden');
                 downloadSection.classList.add('hidden');
                 notFoundSection.classList.add('hidden');
