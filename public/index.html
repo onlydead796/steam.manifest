@@ -264,20 +264,21 @@
             }
 
             function typeTerminalText(text, initialDelay) {
-                let i = 0;
-                setTimeout(() => {
-                    const interval = setInterval(() => {
-                        if (i < text.length) {
-                            terminalOutput.textContent += text.charAt(i);
-                            terminalOutput.scrollTop = terminalOutput.scrollHeight;
-                            i++;
-                        } else {
-                            clearInterval(interval);
-                        }
-                    }, 20);
-                }, initialDelay);
-            }
-
+            const chars = Array.from(text);
+            let i = 0;
+            setTimeout(() => {
+                const interval = setInterval(() => {
+                    if (i < chars.length) {
+                        terminalOutput.textContent += chars[i];
+                        terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                        i++;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, 20);
+            }, initialDelay);
+        }
+            
             function showError(msg) {
                 typeTerminalText(`> HATA: ${msg}\n`, 0);
                 resultsSection.classList.remove('hidden');
